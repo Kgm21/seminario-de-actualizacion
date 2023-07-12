@@ -1,0 +1,54 @@
+<!DOCTYPE>
+<html>
+<head>
+  <title>SQL Injection Test</title>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+</head>
+<body>
+  <h1>Formulario de envío</h1>
+
+  <form id="miFormulario">
+    <label for="idCampo">ID Numérico:</label>
+    <input type="text" id="idCampo" name="idCampo" required>
+    <br><br>
+    <button id="sendButton" type="button">Enviar</button>
+  </form>
+
+  <script>
+
+   function enviarFormulario() 
+   {
+      const idValor = document.getElementById('idCampo').value;
+
+      // Objeto de configuración para la petición Fetch
+      const options = 
+      {
+        method: 'POST',
+        body: JSON.stringify(idValor),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      // URL del archivo PHP
+      const url = 'getUserById.php'; // Reemplaza con la ruta correcta
+
+      // Realizar la petición mediante Fetch
+      fetch(url, options)
+        .then(response => response.json())
+        .then(data => {
+          console.log(data); // Ver la respuesta del servidor en la consola
+        })
+        .catch(error => console.error(error));
+   }
+
+   function main()
+   {
+     sendButton.onclick = enviarFormulario;
+   }
+
+   window.onload = main;
+
+  </script>
+</body>
+</html>
