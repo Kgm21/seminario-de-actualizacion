@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat con Socket.io</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    body {
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    #chat-box {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #user-list-container {
+      display: flex;
+      flex-direction: column;
+      width: 150px;
+    }
+
+    #user-list {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    #messages {
+      list-style-type: none;
+      margin: 0;
+      padding: 0;
+      overflow-y: auto;
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: row;
+      margin-top: 20px;
+    }
+
+    form input,
+    form button {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      outline: none;
+    }
+
+    form input {
+      flex: 1;
+      margin-right: 10px;
+    }
+
+    form button {
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    .selected {
+      background-color: #ddd;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="chat-box">
+    <div id="user-list-container">
+      <ul id="user-list"></ul>
+    </div>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+      <input id="m" autocomplete="off" placeholder="Escribe tu mensaje..." />
+      <button type="submit">Enviar</button>
+    </form>
+  </div>
+
+  <script>
+    const socket = io();
+    let username;
+    let selectedUser;
+
+    function encryptMessage(message, secretKey) {
+      const encryptedMessage = CryptoJS.AES.encrypt(message, secretKey).toString();
+      return encryptedMessage;
+    }
+
+    function decryptMessage(encryptedMessage, secretKey) {
+      try {
+        if (!encryptedMessage) {
+          throw new Error('El mensaje cifrado no está definido.');
+        }
+
+        const decrypted = CryptoJS.AES.decrypt(encryptedMessage, secretKey);
+        return decrypted.toString(CryptoJS.enc.Utf8);
+      } catch (error) {
+        console.error('Error durante el descifrado:', error.message);
+        throw error;
+      }
+    }
+
+    // Manejar actualización de la lista de usuarios
+    socket.on('update_user_list', (userList) => {
+      const userListElement = document.getElementById('user-list');
+      userListElement.innerHTML = '';
+
+      userList.forEach(user => {
+        const listItem = document.createElement('li');
+        listItem.textContent = user;
+
+        // Agregar clase 'selected' al usuario seleccionado
+        if (user === selectedUser) {
+          listItem.classList.add('selected');
+        }
+
+        listItem.addEventListener('click', () => {
+          // Eliminar clase 'selected' de usuarios anteriores
+          const previousSelected = document.querySelector('.selected');
+          if (previousSelected) {
+            previousSelected.classList.remove('selected');
+          }
+
+          selectedUser = user;
+          console.log('Usuario seleccionado:', selectedUser);
+
+          // Agregar clase 'selected' al usuario seleccionado
+          listItem.classList.add('selected');
+        });
+
+        userListElement.appendChild(listItem);
+      });
+    });
+
+    // Solicitar nombre de usuario al principio
+    socket.on('request_username', () => {
+      // Solicitar nombre de usuario solo si no está establecido
+      if (!username) {
+        const promptUsername = () => {
+          username = prompt('Ingresa tu nombre de usuario:');
+          if (username) {
+            socket.emit('username', username);
+          } else {
+            promptUsername(); // Solicitar de nuevo si no se proporciona un nombre
+          }
+        };
+        promptUsername();
+      }
+    });
+
+    // En tu evento de 'submit' del formulario
+    document.querySelector('form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const message = document.querySelector('#m').value;
+
+      const secretKey = 'claveSecreta'; // Cambia 'claveSecreta' por tu clave secreta
+      const encryptedMessage = encryptMessage(message, secretKey);
+      socket.emit('chat message', {
+        user: username,
+        message: encryptedMessage,
+        to: selectedUser
+      });
+      document.querySelector('#m').value = '';
+      return false;
+    });
+
+    socket.on('connect_error', (error) => {
+       console.error('Error de conexión:', error);
+    });
+
+  socket.on('error', (error) => {
+    console.error('Error en el cliente:', error);
+  });
+    // Mostrar mensajes recibidos en la página
+    socket.on('chat message', function (data) {
+      try {
+        // Verificar si el mensaje está cifrado
+        if (data.message) {
+          const decryptedMessage = decryptMessage(data.message, 'claveSecreta');
+          console.log(`${data.user}: ${decryptedMessage}`);
+          // Actualizar la interfaz del usuario con el mensaje descifrado
+          const messagesElement = document.getElementById('messages');
+          const listItem = document.createElement('li');
+          listItem.textContent = `${data.user}: ${decryptedMessage}`;
+          messagesElement.appendChild(listItem);
+        } else {
+          console.log(`${data.user}: ${data.message}`);
+          // Manejar el mensaje que no está cifrado según sea necesario
+        }
+      } catch (error) {
+        console.error('Error durante el descifrado:', error);
+        // Mostrar un mensaje de error al usuario
+      }
+    });
+  </script>
+</body>
+
+</html>
