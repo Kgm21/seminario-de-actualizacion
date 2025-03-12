@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            display: grid;
+            place-content: center;
+            height: 100vh;
+            padding: 36px;
+            grid-template-rows: 1fr;
+        }
+        #chat {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 300px;
+            height: 100%;
+            position: relative;
+        }
+        #form {
+            display: flex;
+            bottom: 0;
+            height: 40px;
+            left: 0;
+            padding: 4px;
+            position: absolute;
+            right: 0;
+        }
+        #input {
+            border-radius: 999px;
+            border: 1px solid #eee;
+            flex: 1;
+            margin: 4px;
+            padding: 0 8px;
+        }
+        #input:focus {
+            outline: 0;
+        }
+        #form > button {
+            background-color: #89f;
+            color: #fff;
+            border: 0;
+            margin: 4px;
+            border-radius: 4px;
+        }
+        #messages{
+            list-style-type: none;
+            margin:0;
+            padding: 0;
+            height: 250px;
+            overflow-y: auto;
+        }
+        #messages > li{
+            padding: .5rem 1rem;
+        }
+        #messages > li:nth-child(odd){
+            background-color: #eee;
+        }
+    </style>
+</head>
+<body>
+    <section id="chat">
+        <ul id="messages"></ul>
+        <form id="form">
+            <input type="text" name="message" id="input" placeholder="Type a message" autocomplete="off">
+            <button type="submit">Send</button>
+        </form>
+    </section>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+    <script>
+       document.addEventListener('DOMContentLoaded', () => {
+        const socket = io();
+        const form = document.getElementById('form');
+        const input = document.getElementById('input');
+        const messagesList = document.getElementById('messages');
+
+        let user = prompt("Please enter your username:");
+
+        // 🔹 Recibir y mostrar historial de mensajes
+        socket.on('chat history', (messages) => {
+            messages.forEach((msg) => addMessage(msg.content, msg.user));
+        });
+
+        // 🔹 Recibir nuevos mensajes
+        socket.on('chat message', (msg) => {
+            addMessage(msg.content, msg.user);
+        });
+
+        // 🔹 Manejar el envío de mensajes sin recargar la página
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();  // Evita que el formulario recargue la página
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('chat message', { content: message, user: user });
+                input.value = '';  // Limpia el input después de enviar
+                input.focus();  // Vuelve a enfocar el campo de entrada
+            }
+        });
+
+        // Función para añadir mensajes a la lista
+        function addMessage(msg, user) {
+            const li = document.createElement('li');
+            li.textContent = `${user}: ${msg}`;
+            messagesList.appendChild(li);
+            messagesList.scrollTop = messagesList.scrollHeight;  // Auto scroll
+        }
+
+        socket.on('connect_error', () => {
+            alert('Unable to connect to the server.');
+        });
+    });
+    </script>
+</html>
