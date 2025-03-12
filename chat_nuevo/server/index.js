@@ -38,26 +38,23 @@ pool.getConnection()
 
     let userCount = 0; 
     io.on('connection', async (socket) => {
-        userCount++;
-        const userName = `User${userCount}`;
-        console.log(`✅ ${userName} se ha conectado`);
+        console.log(`✅ Un usuario se ha conectado`);
+        
+        // Asignar un identificador único al usuario conectado
+        const userId = socket.id;  // O puedes asignar un ID diferente
     
-        // Enviar el nombre de usuario al cliente
-        socket.emit('set user', userName);
-    
-        // 🔹 1️⃣ Enviar historial de mensajes solo al usuario conectado
+        // Enviar historial de mensajes solo al usuario autenticado
         try {
             const connection = await pool.getConnection();
             const [messages] = await connection.execute('SELECT * FROM messages ORDER BY created_at ASC');
             connection.release();
-            socket.emit('chat history', messages);  // Enviar sólo al socket conectado
+            socket.emit('chat history', messages);  // Enviar solo al usuario autenticado
         } catch (error) {
             console.error('❌ Error al recuperar el historial de mensajes:', error);
         }
     
-        // 🔹 2️⃣ Recibir mensajes y guardarlos en la BD
         socket.on('chat message', async (msg) => {
-            io.emit('chat message', msg);  // Enviar mensaje a todos los clientes conectados
+            io.emit('chat message', msg);  // Enviar mensaje a todos los usuarios
             try {
                 const connection = await pool.getConnection();
                 await connection.execute('INSERT INTO messages (content) VALUES (?)', [msg]);
@@ -66,11 +63,20 @@ pool.getConnection()
                 console.error('❌ Error al guardar mensaje:', error);
             }
         });
+        socket.on('chat history', (messages) => {
+            messages.forEach(msg => {
+                // Verifica que los mensajes tienen las propiedades correctas
+                if (msg.content && msg.user) {
+                    addMessage(msg.content, msg.user);  // Muestra el mensaje en la interfaz
+                }
+            });
+        });
     
         socket.on('disconnect', () => {
             console.log('❌ Un usuario se ha desconectado');
         });
     });
+    
     
 
 app.use(logger('dev'));
