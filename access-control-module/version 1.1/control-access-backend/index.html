@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prueba API - Control Access</title>
+    <title>Prueba API - Crear Usuario</title>
 </head>
 <body>
     <h1>Prueba la API - Crear Usuario</h1>
@@ -13,6 +13,11 @@
         <input type="text" id="name" name="name" required>
         <label for="password">Contraseña:</label>
         <input type="password" id="password" name="password" required>
+        <label for="grupo">Grupo (Profesor o Alumno):</label>
+        <select id="grupo" name="grupo" required>
+            <option value="profesor">Profesor</option>
+            <option value="alumno">Alumno</option>
+        </select>   
         <button type="submit">Crear Usuario</button>
     </form>
 
@@ -20,32 +25,33 @@
     <pre id="response"></pre>
 
     <script>
-        // Función para manejar el envío del formulario
+       
         document.getElementById('userForm').addEventListener('submit', function(event) {
-            event.preventDefault();  // Evitar el envío del formulario de forma tradicional
-
-            // Obtener los valores del formulario
+           
+            event.preventDefault();
+            
+            
             const name = document.getElementById('name').value;
             const password = document.getElementById('password').value;
+            const grupo = document.getElementById('grupo').value;
 
-            // Crear el objeto con los datos a enviar
-            const userData = { name, password };
+       
+            const userData = { name, password, grupo };
 
-            // Hacer la solicitud POST a la API
+           
+            console.log(userData);  
+
+    
             fetch('http://localhost:3000/users', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(userData),  // Convertir a JSON
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData),
             })
-            .then(response => response.json())  // Parsear la respuesta como JSON
+            .then(response => response.json())
             .then(data => {
-                // Mostrar la respuesta en el frontend
                 document.getElementById('response').textContent = JSON.stringify(data, null, 2);
             })
             .catch(error => {
-                // Mostrar un error en caso de que falle la solicitud
                 document.getElementById('response').textContent = 'Error: ' + error;
             });
         });
